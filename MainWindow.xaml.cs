@@ -103,11 +103,7 @@ namespace WpfApp1
             
             OverviewerPath = UserSettings.OverviewerPath;
             DefaultRenderName = UserSettings.DefaultRenderName;
-
-            //out_pathBox.Text = "E:\\Escritorio\\OUT\\test137";
-            //ov_pathBox.Text = "E:\\Documentos\\Minecraft tools\\overviewer-0.12.137";
-            //
-            //AddWorlds("E:\\Escritorio\\worldtest");
+            
 
         }
 
