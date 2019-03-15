@@ -1,0 +1,11 @@
+#!/usr/bin/python
+# -*- coding: ascii -*-
+worlds["wrld"] = "<world path>"
+
+renders["<render name>"] = {
+	"world": "wrld",
+	"title": "<render name>",
+}
+
+outputdir = "<output dir>"
+texturepath = "1.8.jar"
