@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Forms;
 using System.Windows.Media;
 
 namespace WpfApp1 {
@@ -73,14 +74,54 @@ namespace WpfApp1 {
         }
     }
 
-    public static class ConfigParameters {
+    public static class ConfigParams {
+
+        // TODO
+        // imgformat
+        // imgquality
+        // optimizeimg
+        // zoom (max min default)
+        // markers
+        // rerender
+        // render customization
+
+        public static string FormatRenderName(string renderName, string renderType) {
+            if (renderType.Equals("normal"))
+                return renderName;
+            else
+                return renderName + " - "
+                    + renderType.Substring(0, 1).ToUpper()
+                    + renderType.Substring(1).Replace("_", " ");
+        }
+
+        // TODO should aim towards a more customizable render selection
+        // selected dimension -> then render type
+        public static string DimensionForRenderType(string renderType) {
+            return renderType.Contains("nether") ? "nether" : "overworld";
+        }
 
         public static string WorldParam(string name, string path) {
             return "worlds[\"" + name + "\"] = \"" + path.ForwardSlash() + "\"\n";
         }
 
-        public static string RenderParam(string folder, string world, string title) {
-            return "renders[\"" + folder.ForwardSlash() + "\"] = { \"world\": \"" + world + "\", \"title\": \"" + title + "\"}\n";
+        public static string RenderParam(string name, string world, string title,
+            string dimension, string rendermode, List<RegionItem> regions) {
+            string render = "renders[\"" + name + "\"] = {\n" +
+                "\t\"world\": \"" + world + "\",\n" +
+                "\t\"title\": \"" + title + "\",\n" +
+                "\t\"dimension\": \"" + dimension + "\",\n" +
+                "\t\"rendermode\": \"" + rendermode + "\"";
+            if (regions != null && regions.Count > 0) {
+                render += ",\n\t\"crop:\"[";
+                for (int i = 0; i < regions.Count; i++) {
+                    if (i != 0) render += ",";
+                    render += "(" + regions[i].x1 + ", " + regions[i].z1 + ", " +
+                        regions[i].z1 + ", " + regions[i].z2 + ")";
+                }
+                render += "]";
+            }
+            render += "\n}";
+            return render;
         }
 
         public static string OutputParam(string path) {
@@ -98,7 +139,7 @@ namespace WpfApp1 {
 
     static class Utils {
 
-
+        
         public static List<int> invalidWinChars = new List<int>() {
             "/"[0], ":"[0], "*"[0], "?"[0], "\""[0], "<"[0], ">"[0], "|"[0] };
 
@@ -143,24 +184,32 @@ namespace WpfApp1 {
         }
 
         public static string BrowseFolder() {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
-            System.Windows.Forms.DialogResult result = dialog.ShowDialog();
-            if (result != System.Windows.Forms.DialogResult.OK)
+            var dialog = new FolderBrowserDialog();
+            if (dialog.ShowDialog() != DialogResult.OK)
                 return null;
             return dialog.SelectedPath;
         }
 
-        public static string BrowseFile() {
-            var dialog = new System.Windows.Forms.OpenFileDialog();
-            System.Windows.Forms.DialogResult result = dialog.ShowDialog();
-            if (result != System.Windows.Forms.DialogResult.OK)
+        public static string BrowseFile(string defaultFileName = "") {
+            var dialog = new OpenFileDialog();
+            dialog.FileName = defaultFileName;
+            if (dialog.ShowDialog() != DialogResult.OK)
+                return null;
+            return dialog.FileName;
+        }
+
+        public static string SaveFile(string defaultFileName = "config.json") {
+            var dialog = new SaveFileDialog();
+            dialog.FileName = defaultFileName;
+            if (dialog.ShowDialog() != DialogResult.OK)
                 return null;
             return dialog.FileName;
         }
 
 
         //EXTENDED METHODS VVVVVVVVVVVVV
-        public static void Write(this RichTextBox box, string text, SolidColorBrush color) {
+        public static void Write(this System.Windows.Controls.RichTextBox box,
+            string text, SolidColorBrush color) {
             Console.WriteLine(text);
             
             TextRange tr = new TextRange(box.Document.ContentEnd, box.Document.ContentEnd) {
@@ -171,25 +220,25 @@ namespace WpfApp1 {
             box.ScrollToEnd();
         }
 
-        public static void Append(this RichTextBox box, string text, SolidColorBrush color) {
+        public static void Append(this System.Windows.Controls.RichTextBox box, string text, SolidColorBrush color) {
             box.Write(text + "\n", color);
         }
 
-        public static void AppendMsg(this RichTextBox box, string text) {
+        public static void AppendMsg(this System.Windows.Controls.RichTextBox box, string text) {
             box.Write(text + "\n", ColorCode.MSG);
         }
 
-        public static void AppendError(this RichTextBox box, string text) {
+        public static void AppendError(this System.Windows.Controls.RichTextBox box, string text) {
             box.Write("ERROR: "+text+"\n", ColorCode.ERROR);
         }
 
-        public static void WriteError(this TextBox box, string text) {
+        public static void WriteError(this System.Windows.Controls.TextBox box, string text) {
             box.Clear();
             box.Foreground = ColorCode.ERROR;
             box.AppendText(text);
         }
 
-        public static void Write(this TextBox box, string text) {
+        public static void Write(this System.Windows.Controls.TextBox box, string text) {
             box.Clear();
             box.Foreground = Brushes.Black;
             box.AppendText(text);

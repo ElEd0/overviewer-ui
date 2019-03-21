@@ -12,46 +12,46 @@
             <TabItem Header="Parameters">
 
                 <StackPanel Orientation="Vertical">
-
-                    <StackPanel Margin="5" Orientation="Horizontal" >
-                        <Label Content="Output path" Height="25" Width="118"/>
-                        <TextBox x:Name="out_path_box" Height="25" Width="304" MinLines="1" MaxLines="1" FontSize="14"/>
-                        <Button x:Name="browse_out" Content="browse" Height="25" Width="74" FontSize="15" FontWeight="Bold" Margin="10,0,0,0"/>
-                    </StackPanel>
-
-                    <StackPanel Margin="5" Orientation="Horizontal" >
-                        <Label Content="Minecraft .jar" Height="25" Width="118"/>
-                        <TextBox x:Name="jar_path_box" Height="25" Width="304" MinLines="1" MaxLines="1" FontSize="14"/>
-                        <Button x:Name="browse_jar" Content="browse" Height="25" Width="74" FontSize="15" FontWeight="Bold" Margin="10,0,0,0"/>
-                    </StackPanel>
-
-                    <StackPanel Margin="5" Orientation="Horizontal" >
-                        <Label Content="Threads (0 for all)" Height="25" Width="118"/>
-                        <TextBox x:Name="process_count" Text="2" Height="25" Width="40" MinLines="1" MaxLines="1" FontSize="14"/>
-                    </StackPanel>
-
-                    <UniformGrid Margin="5" Columns="2">
-                        <GroupBox Padding="5" Width="auto" Header="Group renders by">
-                            <StackPanel Orientation="Vertical">
-                                <RadioButton GroupName="GroupRendersBy" Content="All together" IsChecked="True"></RadioButton>
-                                <RadioButton GroupName="GroupRendersBy" Content="World name"></RadioButton>
-                                <RadioButton GroupName="GroupRendersBy" Content="Render type"></RadioButton>
+                    <Grid HorizontalAlignment="Center" >
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Width="auto" Orientation="Vertical" Margin="0,0,30,0">
+                            <StackPanel Margin="5" Orientation="Horizontal" >
+                                <Label Content="Output path" Height="25" Width="110"/>
+                                <TextBox x:Name="out_path_box" Height="25" Width="304" MinLines="1" MaxLines="1" FontSize="14"/>
+                                <Button x:Name="browse_out" Content="browse" Height="25" Width="74" FontSize="15" FontWeight="Bold" Margin="10,0,0,0"/>
                             </StackPanel>
-                        </GroupBox>
-                        <GroupBox Padding="5" Width="auto" Header="Order renders by">
+
+                            <StackPanel Margin="5" Orientation="Horizontal" >
+                                <Label Content="Minecraft .jar" Height="25" Width="110"/>
+                                <TextBox x:Name="jar_path_box" Height="25" Width="304" MinLines="1" MaxLines="1" FontSize="14"/>
+                                <Button x:Name="browse_jar" Content="browse" Height="25" Width="74" FontSize="15" FontWeight="Bold" Margin="10,0,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel Margin="5" Orientation="Horizontal" >
+                                <Label Content="Threads (0 for all)" Height="25" Width="110"/>
+                                <TextBox x:Name="process_count" Text="2" Height="25" Width="40" MinLines="1" MaxLines="1" FontSize="14"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <GroupBox Grid.Column="1" Padding="5" Width="auto" Header="Order renders by" Margin="30,0,0,0" >
                             <UniformGrid Columns="2">
                                 <StackPanel Orientation="Vertical">
-                                    <RadioButton GroupName="OrderRendersBy" Content="List order"></RadioButton>
-                                    <RadioButton GroupName="OrderRendersBy" Content="Last played"></RadioButton>
-                                    <RadioButton GroupName="OrderRendersBy" Content="World name" IsChecked="True"></RadioButton>
+                                    <RadioButton x:Name="orderBy_list_order" GroupName="OrderRendersBy" Content="List order"></RadioButton>
+                                    <RadioButton x:Name="orderBy_last_played" GroupName="OrderRendersBy" Content="Last played"></RadioButton>
+                                    <RadioButton x:Name="orderBy_world_name" GroupName="OrderRendersBy" Content="World name" IsChecked="True"></RadioButton>
                                 </StackPanel>
                                 <StackPanel Orientation="Vertical">
-                                    <RadioButton GroupName="OrderAscDesc" Content="Ascendent" IsChecked="True"></RadioButton>
-                                    <RadioButton GroupName="OrderAscDesc" Content="Descendent"></RadioButton>
+                                    <RadioButton x:Name="orderByOrder_asc" GroupName="OrderAscDesc" Content="Ascendent" IsChecked="True"></RadioButton>
+                                    <RadioButton x:Name="orderByOrder_desc" GroupName="OrderAscDesc" Content="Descendent"></RadioButton>
                                 </StackPanel>
                             </UniformGrid>
                         </GroupBox>
-                    </UniformGrid>
+                    </Grid>
                 </StackPanel>
                 
             </TabItem>
@@ -64,7 +64,7 @@
                             <Button x:Name="remove_world" Content="Remove" Margin="10,5,10,5" Height="25" Width="Auto" Padding="2" FontSize="15" FontWeight="Bold" />
                             <Button x:Name="copy_world" Content="Copy" Margin="10,5,5,5" Height="25" Width="Auto" Padding="2" FontSize="15" FontWeight="Bold" />
                         </StackPanel>
-                        <ListView x:Name="world_list" Width="300" Margin="10,10,10,10" KeyDown="WorldListKeyDown"/>
+                        <ListView x:Name="world_list" Width="300" Margin="10,10,10,10" KeyDown="WorldListKeyDown" MouseLeftButtonDown="WorldListLeftButton" />
                     </DockPanel>
 
                     <StackPanel Orientation="Vertical">
@@ -174,9 +174,9 @@
                     <UniformGrid Columns="2">
                         <GroupBox Padding="5" Width="auto" DockPanel.Dock="Left" Header="Default render name">
                             <StackPanel Orientation="Vertical">
-                                <RadioButton GroupName="DefaultRenderName" Content="World name"></RadioButton>
-                                <RadioButton GroupName="DefaultRenderName" Content="Last played"></RadioButton>
-                                <RadioButton GroupName="DefaultRenderName" Content="World name - Last played" IsChecked="True"></RadioButton>
+                                <RadioButton x:Name="defaultRenderName_world_name" GroupName="DefaultRenderName" Content="World name"></RadioButton>
+                                <RadioButton x:Name="defaultRenderName_last_played" GroupName="DefaultRenderName" Content="Last played"></RadioButton>
+                                <RadioButton x:Name="defaultRenderName_both_id" GroupName="DefaultRenderName" Content="World name - Last played" IsChecked="True"></RadioButton>
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Padding="5" Width="auto" DockPanel.Dock="Right" Header="Render config">

@@ -9,18 +9,8 @@ using System.Windows.Controls;
 namespace WpfApp1 {
     public class RenderItem : ListViewItem, ICloneable {
 
-        private string renderName, name, path;
-        private long lastPlayed;
-
-        private bool renderNormal, renderLighting, renderSmoothLighting,
-            renderCave, renderNight, renderSmoothNight,
-            renderNether, renderNetherLighting, renderNetherSmoothLighting;
-        
-        private List<RegionItem> regions;
-
         public RenderItem(string path) {
-            this.path = path;
-            regions = new List<RegionItem>();
+            this.Path = path;
             
             NbtFile file = new NbtFile();
             file.LoadFromFile(path + "\\level.dat");
@@ -28,99 +18,59 @@ namespace WpfApp1 {
 
 
             //clean level name so it doesnt contain any non valid symbols
-            name = "";
+            Name = "";
             string levelName = root["Data"]["LevelName"].StringValue;
             for (int i = 0; i < levelName.Length; i++) {
                 int c = levelName[i];
                 if (c < 128 && !Utils.invalidWinChars.Contains(c))
-                    name += (char) c;
+                    Name += (char) c;
             }
 
-            lastPlayed = root["Data"]["LastPlayed"].LongValue;
+            LastPlayed = root["Data"]["LastPlayed"].LongValue;
 
             DateTime when = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-                .AddMilliseconds(lastPlayed).ToLocalTime();
+                .AddMilliseconds(LastPlayed).ToLocalTime();
             
-            Content = name + " - " + when.ToString("dd/MM/yyyy H:mm:ss");
+            Content = Name + " - " + when.ToString("dd/MM/yyyy H:mm:ss");
 
-            renderName = name + " - " + when.ToString("dd/MM/yyyy");
+            RenderName = Name + " - " + when.ToString("dd/MM/yyyy");
         }
 
 
-        public string Name {
-            get { return name; }
-            set { this.name = value; }
-        }
+        public string Name { get; set; }
 
-        public string Path {
-            get { return path; }
-        }
+        public string Path { get; }
 
-        public long LastPlayed {
-            get { return lastPlayed; }
-        }
-        
+        public long LastPlayed { get; }
+
         public string[] RenderModes {
             get {
                 List<string> modes = new List<string>();
-                if (renderNormal) modes.Add("normal");
-                if (renderLighting) modes.Add("lighting");
-                if (renderSmoothLighting) modes.Add("smooth_lighting");
-                if (renderCave) modes.Add("cave");
-                if (renderNight) modes.Add("night");
-                if (renderNether) modes.Add("nether");
-                if (renderNetherLighting) modes.Add("nether_lighting");
-                if (renderNetherSmoothLighting) modes.Add("nether_smooth_lighting");
+                if (RenderNormal) modes.Add("normal");
+                if (RenderLighting) modes.Add("lighting");
+                if (RenderSmoothLighting) modes.Add("smooth_lighting");
+                if (RenderCave) modes.Add("cave");
+                if (RenderNight) modes.Add("night");
+                if (RenderNether) modes.Add("nether");
+                if (RenderNetherLighting) modes.Add("nether_lighting");
+                if (RenderNetherSmoothLighting) modes.Add("nether_smooth_lighting");
                 return modes.ToArray<string>();
             }
         }
 
-        public bool RenderNormal {
-            get { return renderNormal; }
-            set { this.renderNormal = value; }
-        }
-        public bool RenderLighting {
-            get { return renderLighting; }
-            set { this.renderLighting = value; }
-        }
-        public bool RenderSmoothLighting {
-            get { return renderSmoothLighting; }
-            set { this.renderSmoothLighting = value; }
-        }
-        public bool RenderCave {
-            get { return renderCave; }
-            set { this.renderCave = value; }
-        }
-        public bool RenderNight {
-            get { return renderNight; }
-            set { this.renderNight = value; }
-        }
-        public bool RenderSmoothNight {
-            get { return renderSmoothNight; }
-            set { this.renderSmoothNight = value; }
-        }
-        public bool RenderNether {
-            get { return renderNether; }
-            set { this.renderNether = value; }
-        }
-        public bool RenderNetherLighting {
-            get { return renderNetherLighting; }
-            set { this.renderNetherLighting = value; }
-        }
-        public bool RenderNetherSmoothLighting {
-            get { return renderNetherSmoothLighting; }
-            set { this.renderNetherSmoothLighting = value; }
-        }
+        public bool RenderNormal { get; set; }
+        public bool RenderLighting { get; set; }
+        public bool RenderSmoothLighting { get; set; }
+        public bool RenderCave { get; set; }
+        public bool RenderNight { get; set; }
+        public bool RenderSmoothNight { get; set; }
+        public bool RenderNether { get; set; }
+        public bool RenderNetherLighting { get; set; }
+        public bool RenderNetherSmoothLighting { get; set; }
 
-        public List<RegionItem> RegionItems {
-            get { return regions; }
-            set { this.regions = value; }
-        }
+        public List<RegionItem> RegionItems { get; set; }
 
-        public string RenderName {
-            get { return renderName; }
-            set { this.renderName = value; }
-        }
+        public string RenderName { get; set; }
 
         public object Clone() {
             return new RenderItem(Path);

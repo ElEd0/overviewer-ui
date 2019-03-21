@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace WpfApp1 {
-    class RenderProfile {
+    public class RenderProfile {
 
         public string OutPath { get; set; }
         public string JarPath { get; set; }
@@ -13,12 +13,12 @@ namespace WpfApp1 {
 
         public List<RenderItem> Renders { get; set; }
 
-        public GroupRenderByType GroupBy { get; set; }
-        public OrderRenderByType OrderBy { get; set; }
-        public bool OrderReversed { get; set; }
-
-        public RenderProfile() {
-
+        public RenderProfile(string outPath, string jarPath, int threadCount, 
+            List<RenderItem> renders) {
+            this.OutPath = outPath;
+            this.JarPath = jarPath;
+            this.ThreadCount = threadCount;
+            this.Renders = renders;
         }
 
     }

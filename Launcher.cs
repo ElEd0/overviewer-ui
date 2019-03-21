@@ -12,19 +12,13 @@ using System.Windows.Threading;
 namespace WpfApp1 {
     class Launcher {
 
-        //Hardcoded limit for renders, use -1 for no limit
-        private const int LIMIT = -1;
-
-        private const bool RENDER = true;
+        private const bool RENDER = false;
 
         private bool running = false;
-
-        private string ovPath, outPath, workPath;
-        private int threads;
-
-        private string[] regions;
-        private List<WorldItem> worlds;
+        
         private MainWindow main;
+        private RenderProfile profile;
+        private string ovPath;
 
         private Thread ovThread;
         private Process ovProcess;
@@ -36,40 +30,21 @@ namespace WpfApp1 {
 
         }
 
-        public string Launch(string ovPath, string outPath, int threads) {
-            if(ovPath == null || outPath == null ||
-                ovPath.Equals("") || outPath.Equals("")) 
-                return ErrorCode.PARAM_ERROR;
+        public string Launch(RenderProfile prof) {
+            this.profile = prof;
+            this.ovPath = UserSettings.OverviewerPath;
 
-            if (!outPath.IsValidPath()) 
-                return ErrorCode.PARAM_ERROR;
-            
-            this.threads = threads;
-            this.ovPath = ovPath;
-            this.outPath = outPath;
-            this.workPath = main.WorkPath;
-
-            regions = main.GenRegions();//get regions file names
-            worlds = main.Worlds;// get worlds items
+            main.console.AppendMsg("Launching... this may take a while, especially if you have many big worlds");
 
             watch = new Stopwatch();
             watch.Start();
             running = true;
-            main.console.AppendMsg("Starting... this may take a while, especially if you have many worlds and/or regions");
-            
 
-            Directory.CreateDirectory(outPath);
-
-            Console.WriteLine("directory : "+outPath+" created");
-
-            if (!Directory.Exists(ovPath) || !Directory.Exists(outPath)) {
-                Console.WriteLine("dirs dont exist");
-                return ErrorCode.PARAM_ERROR;
-            }                        
+            Directory.CreateDirectory(prof.OutPath);
 
             ovThread = new Thread(new ThreadStart(Run));
             ovThread.Start();
-            main.console.Append("Started overviewer thread", ColorCode.MSG);
+            main.console.Append("Starting overviewer thread", ColorCode.MSG);
             return ErrorCode.CORRECT;
         }
 
@@ -107,23 +82,21 @@ namespace WpfApp1 {
         public void Run() {
             
             try {
-
-                if (worlds.Count < 1)
-                    throw new Exception("No worlds");
-
-                for (int i = 0; i < worlds.Count; i++)
-                    if (!CreateWorld(worlds[i], i))
-                        throw new Exception("Couldnt create one or more worlds");
+                
                 //create config file for overviewer to use
-                CreateConfig();
+                string configFile = CreateConfig();
+
+                main.Dispatcher.Invoke(() => {
+                    main.console.AppendMsg("Created config file in " + ovPath + "\\" + configFile);
+                });
 
                 //create overviewer process
-                ovProcess = new System.Diagnostics.Process {
-                    StartInfo = new System.Diagnostics.ProcessStartInfo() {
-                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                ovProcess = new Process {
+                    StartInfo = new ProcessStartInfo() {
+                        WindowStyle = ProcessWindowStyle.Hidden,
                         FileName = "cmd.exe",
                         WorkingDirectory = ovPath,
-                        Arguments = "/C overviewer.exe --config=cfg.temp",
+                        Arguments = "/C overviewer.exe --config=" + configFile,
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         CreateNoWindow = true
@@ -133,7 +106,7 @@ namespace WpfApp1 {
                 if (RENDER) {
                     main.Dispatcher.Invoke(() => {
                         main.console.AppendMsg("Starting Overviewer process using "
-                            + (threads == 0 ? "all" : ""+threads)
+                            + (profile.ThreadCount < 1 ? "all" : "" + profile.ThreadCount)
                             + " threads");
                     });
 
@@ -149,9 +122,9 @@ namespace WpfApp1 {
                         main.console.Append("\t" + line, ColorCode.OV);
                         //set progress
                         if (line.Contains("complete")) {
-                            int.TryParse(line.Split('.')[1].Substring(2).Split('%')[0], out int perc);
-
-                            main.SetProgress(perc);
+                            if (int.TryParse(line.Split('.')[1].Substring(2).Split('%')[0],
+                                out int perc))
+                                main.SetProgress(perc);
 
                             if (line.Contains("100% complete."))
                                 main.FinishProgress();
@@ -160,206 +133,82 @@ namespace WpfApp1 {
 
                 }
 
-                //modifiy overviewerConfig.js to display all renders as one world
-                string code = "";
-                if (!(code = ModifiyOVConfig()).Equals(ErrorCode.CORRECT))
-                    main.Dispatcher.Invoke(() => {
-                        main.console.AppendError(code);
-                    });
-
-
             } catch (Exception e) {
                 Console.WriteLine(e.StackTrace);
                 main.Dispatcher.Invoke(() => {
-                    main.console.AppendError("Exception during Launch");
+                    main.console.AppendError("Exception during Launch: " + e.Message);
                 });
             } finally {
-                if(running)
-                    main.Dispatcher.Invoke(() => {
-                        Finish();
-                    });
-            }
-
-        }
-
-        //This will always be executed in main thread
-        public void Finish() {
-            //always try to delete working dir, if this fails bad luck..
-            try {
-                Directory.Delete(workPath, true);
-            } catch (DirectoryNotFoundException e) {
-            } catch (Exception e) {
-                Console.WriteLine(e.StackTrace);
-                main.console.AppendError("Failed to delete temp files, you can try to delete the directory "
-                    + workPath + " manually");
-            }
-
-            main.ToggleLaunchStop(false);
-            main.ResetProgress();
-
-            if (watch == null)
-                return;
-            //end timer
-            watch.Stop();
-            running = false;
-            TimeSpan time = TimeSpan.FromMilliseconds(watch.ElapsedMilliseconds);
-            main.console.AppendMsg("Done in : " + time.ToString(@"hh\:mm\:ss\:fff"));
-            watch.Reset();
-        }
-
-
-        private string ModifiyOVConfig() {
-            try {
-                string text = File.ReadAllText(outPath + "\\overviewerConfig.js");
-
-                // sort world items in descending order by length of index
-                // for example:
-                //   3   world.012
-                //   2   world.18
-                //   2   world.34
-                //   1   world.1
-                //   0   world
-                // This way longer strings will be replaced before than shorter ones
-                // so that the shorter ones dont interfere
-                // ('world.12' would replace 'world.123' into 'xxx3')
-
-                worlds.Sort(
-                    delegate (WorldItem i1, WorldItem i2) {
-                        string s1, s2;
-                        try {
-                            s1 = i1.NameWIndex.Split(new char[] { '.' })[1];
-                        } catch (Exception e) {
-                            s1 = "";
-                        }
-                        try {
-                            s2 = i2.NameWIndex.Split(new char[] { '.' })[1];
-                        } catch (Exception e) {
-                            s2 = "";
-                        }
-
-                        return s1.Length > s2.Length ? -1 : s1.Length < s2.Length ? 1 : 0;
-                    }
-                );
-                //replace world names by wrld
-                foreach (WorldItem world in worlds)
-                    text = text.Replace(world.NameWIndex, "wrld");
-
-                //remove all world definitions in 'worlds' array except last one
-                bool done = false;
-                string op = "";
-                foreach (string line in text.Split('\n')) {
-                    if (!done) {
-                        if (!line.Contains("\"wrld\","))
-                            op += line + "\n";
-                    } else {
-                        op += line + "\n";
-                        continue;
-                    }
-                    if (line.Contains("],"))
-                        done = true;
-                    
+                if(running) {
+                    Finish();
                 }
-
-                //write all text into file
-                File.WriteAllText(outPath + "\\overviewerConfig.js", op);
-                return ErrorCode.CORRECT;
-            } catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException) {
-                return "overviewerConfig.js not found! Did render end correctly?";
-            } catch (IOException e) {
-                Console.WriteLine(e.StackTrace);
-                return "Error creating overviewerConfig.js";
             }
 
         }
 
-        private void CreateConfig() {
-            int count = 0;
-            //create config file
-            string cfg = "";
-            foreach (WorldItem world in worlds) {
-                count++;
-                if (LIMIT != -1 && count > LIMIT)
-                    break;
-                cfg += ConfigParameters.WorldParam(world.NameWIndex, world.WorkPath);
-                cfg += ConfigParameters.RenderParam(world.DateWIndex, world.NameWIndex, world.Date);
+        public void Finish() {
+            running = false;
+
+            string finishMsg = "";
+            if (watch != null) {
+                //end timer
+                watch.Stop();
+                TimeSpan time = TimeSpan.FromMilliseconds(watch.ElapsedMilliseconds);
+                finishMsg = "Done in : " + time.ToString(@"hh\:mm\:ss\:fff");
+                watch.Reset();
+            }
+            main.Dispatcher.Invoke(() => {
+                main.Finish(finishMsg);
+            });
+        }
+
+
+        private string CreateConfig() {
+            List<string> worldDeclarations = new List<string>();
+            List<string> renderDeclarations = new List<string>();
+
+            int wrldCount = 0;
+
+            foreach (RenderItem wrld in profile.Renders) {
+                string name = "w" + wrldCount;
+                int renderCount = 0;
+                worldDeclarations.Add(ConfigParams.WorldParam(name, wrld.Path));
+                foreach (string mode in wrld.RenderModes) {
+                    string renderName = name + ".r" + renderCount;
+                    string renderTitle = ConfigParams.FormatRenderName(wrld.RenderName, mode);
+                    string renderDimension = ConfigParams.DimensionForRenderType(mode);
+                    renderDeclarations.Add(ConfigParams.RenderParam(
+                        renderName, name, renderTitle, renderDimension, mode, wrld.RegionItems
+                    ));
+                    renderCount++;
+                }
+                wrldCount++;
             }
 
-            cfg += ConfigParameters.OutputParam(outPath);
-            //TODO texture param
+            string cfg = "";
 
-            cfg += ConfigParameters.TextureParam("1.8.jar");
+            foreach (string w in worldDeclarations)
+                cfg += w;
+            cfg += "\n";
+            foreach (string r in renderDeclarations)
+                cfg += r;
+            cfg += "\n";
 
-            if (threads != 0)
-                cfg += ConfigParameters.ThreadsParam(threads);
+            cfg += ConfigParams.OutputParam(profile.OutPath);
+
+            if (profile.JarPath != null)
+                cfg += ConfigParams.TextureParam(profile.JarPath);
+
+            if (profile.ThreadCount > 0)
+                cfg += ConfigParams.ThreadsParam(profile.ThreadCount);
 
             try {
-                File.WriteAllText(ovPath + "\\cfg.temp", cfg);
+                string configName = "ovconfig" + DateTime.Now.ToFileTime() + ".txt";
+                File.WriteAllText(
+                    ovPath + "\\" + configName, cfg);
+                return configName;
             } catch (IOException e) {
                 throw;
-            }
-        }
-
-        /// <summary>
-        /// Creates the working files needed to render the world
-        /// </summary>
-        /// <param name="world"></param>
-        /// <param name="index"></param>
-        /// <returns>true if </returns>
-        public bool CreateWorld(WorldItem world, int index) {
-            try {
-
-                world.Index = index;
-
-                // set working path
-                world.WorkPath = workPath + "\\" + world.NameWIndex;
-
-                //create region folder which will create all non existing parent folders (including world folder)
-                DirectoryInfo regionFolder = new DirectoryInfo(world.WorkPath + "\\region");
-                regionFolder.Create();
-
-                foreach (FileInfo region in regionFolder.EnumerateFiles())
-                    region.Delete();
-
-                
-
-                //copy level.dat
-                try {
-                    File.Delete(world.WorkPath + "\\level.dat");
-                } catch (DirectoryNotFoundException) { }
-                File.Copy(world.Path + "\\level.dat",
-                    world.WorkPath + "\\level.dat");
-
-                
-                string[] regs = regions;
-
-                //if no regions in list copy all of them
-                if(regions.Length == 0) {
-                    FileInfo[] files = new DirectoryInfo(world.Path + "\\region").GetFiles();
-                    regs = new string[files.Length];
-                    for (int i=0; i<regs.Length; i++)
-                        regs[i] = files[i].Name;
-                }
-
-                //copy regions
-                foreach (string r in regs) {
-                    try {
-                        try {
-                            File.Delete(world.WorkPath + "\\region\\" + r);
-                        } catch (DirectoryNotFoundException) { }
-
-                        File.Copy(world.Path + "\\region\\" + r,
-                            world.WorkPath + "\\region\\" + r);
-
-                    } catch (FileNotFoundException) {
-                        continue;
-                    }
-                }
-
-                return true;
-
-            } catch (System.IO.IOException e) {
-                Console.WriteLine(e.StackTrace);
-                return false;
             }
         }
         
